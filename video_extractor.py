@@ -1,31 +1,31 @@
 import cv2
 
-def VideoExtractor() :
+def VideoExtractor(start_frame) :
 
     output_path = "raw/images/"
     output_path_sub = "raw/sub_images/"
 
     cap= cv2.VideoCapture('raw/video/bacteria.mp4')
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     img_num=0
-    max_images=10
+    max_images=20
     while(cap.isOpened()):
         ret, frame = cap.read()
         if ret == False:
+            print("¨Problem")
             break
         
         # Obtenir les dimensions de l'image
         h, w = frame.shape[:2]
         # Déterminer la différence entre la hauteur et la largeur
-        d  = abs(h - w)
+        d  = frame.shape[1] % 256 
         # Ajouter des bordures noires pour rendre l'image carrée
-        if h > w:
-            frame = cv2.copyMakeBorder(frame, 0, 0, 0, d, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-        else:
-            frame = cv2.copyMakeBorder(frame, 0, d, 0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+        if  d != 0 :
+            frame = cv2.copyMakeBorder(frame, 0, 0, 0, 256-d, cv2.BORDER_CONSTANT, value=[0, 0, 0])
         
         d = frame.shape[0] % 256 
         if  d != 0 :
-            frame = cv2.copyMakeBorder(frame, 0, 256-d, 0, 256-d, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            frame = cv2.copyMakeBorder(frame, 0, 256-d, 0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             
         # Découper l'image en plusieurs images de taille 256x256
         step = 256
@@ -48,4 +48,4 @@ def VideoExtractor() :
 
 
 if __name__ == "__main__":
-    VideoExtractor()
+    VideoExtractor(200)

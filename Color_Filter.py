@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-path = "raw/img0.jpg"
+path = "raw/images/img0.jpg"
 
 #Defining window
 cv2.namedWindow("TrackBars")
