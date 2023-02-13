@@ -34,7 +34,7 @@ img1 = img.copy()
 img2 = img.copy()
 img3 = img.copy()
 
-img1 = cv2.convertScaleAbs(img1, alpha=3.0, beta=-10)
+img1 = cv2.convertScaleAbs(img1, alpha=10, beta=0)
 
 
 cv2.imshow("Image C", img1)
