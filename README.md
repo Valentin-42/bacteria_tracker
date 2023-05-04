@@ -1,8 +1,5 @@
 <div align="center">
-
-  <img src="chemin_vers/logo.png" alt="logo" width="200" height="auto" />
   <h1>Bacteria Tracker</h1>
-  
 <!-- Badges -->
 <p>
   <a href="https://github.com/Louis3797/awesome-readme-template/graphs/contributors">
