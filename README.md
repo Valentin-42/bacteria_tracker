@@ -54,6 +54,7 @@ This project takes place in the context of a collaboration with the microbiologi
 - Tracking
 - Statistics
 
+See slides with videos : [here](https://docs.google.com/presentation/d/1IzDbCYl1f1OtAy6J5RWzvNzrpVyTDHdpT4xsQvKNCBk/edit?usp=sharing)
 
 <!-- Architecture -->
 ## 	📐  Architecture
