@@ -71,7 +71,6 @@ This code defines a class called `DatasetCreator` which has several methods to c
 	   * kalman.py :
 	   Computes tracking from a set of detections using a Kalman filter. Create the `Bacteria` class.
 	   * normalize.py : Normalize pixels of an image (cool code but not really used for now).
-	   * 📁 Video / : Contains all videos and extracted raw images.
    * mydetect.sh : Bash script to run detect.py with custom args. Compute detections from a set of images.
    * mytrain.sh : Bash script to run train.py with custom args.  Train a model given dataset path.
 
