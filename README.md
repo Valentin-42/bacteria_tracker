@@ -126,11 +126,13 @@ Distributed under the no License. See LICENSE.txt for more information.
 ## :handshake: Contact
 
 Dream Lab   - https://dream.georgiatech-metz.fr/ 
+
 Georgia Tech - https://europe.gatech.edu/
 
 Alvaro - https://github.com/hopett11
 Valentin - https://github.com/Valentin-42
-Prof - https://github.com/cedricpradalier
+
+Prof. - https://github.com/cedricpradalier
 
 
 
