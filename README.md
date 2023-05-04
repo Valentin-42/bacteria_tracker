@@ -129,8 +129,12 @@ Dream Lab   - https://dream.georgiatech-metz.fr/
 
 Georgia Tech - https://europe.gatech.edu/
 
-Alvaro - https://github.com/hopett11
+Students :
+
+Alvaro - https://github.com/hopett11 - & - 
 Valentin - https://github.com/Valentin-42
+
+Supervised by :
 
 Prof. - https://github.com/cedricpradalier
 
