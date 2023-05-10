@@ -111,7 +111,7 @@ def save_to_csv(X,Llost,filename,video_duration):
         data.append({'Orientations': b.orientations,'Apparition a l\'image': b.spawn_frame, 'Perdu a l\'image': b.lost_frame, 'BB': b.boundingboxes, 'Moments': b.moments})
 
     df = pd.DataFrame(data)
-    df.to_csv(filename, index=True)
+    df.to_csv(filename, index=True, compression="zip")
 
 
 def compute_iou(boxA, boxB):

@@ -62,7 +62,7 @@ def statistics_from_csv(file_path,output_folder_path) :
 
 # This function still has a problem somewhere, probably an index error or we are misreading the csv file.
 def create_illustration_video(file_path,output_folder_path,metadata_file_path):
-
+    
     with open(metadata_file_path) as f:
         data = json.load(f)
 
