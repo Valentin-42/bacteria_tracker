@@ -90,7 +90,7 @@ class Bacterie:
             unique_filename = str(uuid.uuid4())
             oi = roi.copy()
             oi = cv2.ellipse(oi, (int(bx),int(by)), (int(majorL),int(minorL)),int(-angle+180), 0, 360, (0,0,255), 2)
-            cv2.imwrite("./test/angle_"+str(round(angle,10))+"_"+unique_filename+".jpg", oi)
+            cv2.imwrite(os.path.join("test","angle_"+str(round(angle,10))+"_"+unique_filename+".jpg"), oi)
 
         self.orientations.append(angle)
         self.ellipticity = ellipticity
@@ -206,17 +206,18 @@ def Update(bacteria,Z) :
 def main_tracker(path_to_labels,path_to_img,output_folder) :
     
     files = os.listdir(path_to_labels)
-    sorted_files = sorted(files, key=lambda x: int(x[3:-4]))
+    # sorted_files = sorted(files, key=lambda x: int(x[3:-4]))
+    sorted_files = sorted(files)
     video_duration = len(files)
 
     for i,file in enumerate(sorted_files) : #for each frame 
         name,ext = os.path.splitext(file) 
         print("Kalman is processing image : ",name)
-        img = cv2.imread(path_to_img+name+".jpg")
+        img = cv2.imread(os.path.join(path_to_img,name+".jpg"))
         imgh, imgw = img.shape[:2]
         img_out = img.copy()
         Z = []
-        with open(path_to_labels+file, "r") as labelfile:
+        with open(os.path.join(path_to_labels,file), "r") as labelfile:
             for line in labelfile :
                 t = line.split("\n")[0].split(" ")
                 [x,y,w,h] = [float(t[1]),float(t[2]),float(t[3]),float(t[4])]
@@ -245,11 +246,11 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
                 color =(255,0,0) #Blue
             
             cv2.rectangle(img_out, (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), color, 3)
-        cv2.imwrite(output_folder+"images/"+name+".jpg", img_out)
+        cv2.imwrite(os.path.join(output_folder,"images",name+".jpg"), img_out)
 
-    save_to_csv(X,Llost,output_folder+"data/results.csv",video_duration)
+    save_to_csv(X,Llost,os.path.join(output_folder,"data","results.csv"),video_duration)
     metadata = {'video_duration':video_duration,'original_labels':path_to_labels,'original_images':path_to_img}
-    with open(output_folder+"data/tracking_metadata.json","w") as f :
+    with open(os.path.join(output_folder,"data","tracking_metadata.json"),"w") as f :
         json.dump(metadata,f)
 
 if __name__ == "__main__":
@@ -260,17 +261,17 @@ if __name__ == "__main__":
     # output_folder    = '/home/GPU/vvial/home_gtl/bacteria_tracker_ws/experiment/'
 
     base_path = sys.argv[1]
-    path_to_labels = base_path+"labels/"
-    path_to_img = base_path+"original_images/images/"
+    path_to_labels = os.path.join(base_path,"labels")
+    path_to_img = os.path.join(base_path,"original_images","images")
     output_folder = sys.argv[2]
 
     if os.path.isdir(output_folder) :
         shutil.rmtree("./test/")
         os.mkdir("./test/")
-        if not os.path.isdir(output_folder+"images/"):
-            os.mkdir(output_folder+"images/")
-        if not os.path.isdir(output_folder+"data/"):
-            os.mkdir(output_folder+"data/")
+        if not os.path.isdir(os.path.join(output_folder,"images")):
+            os.mkdir(os.path.join(output_folder,"images"))
+        if not os.path.isdir(os.path.join(output_folder,"data")):
+            os.mkdir(os.path.join(output_folder,"data"))
 
         print("Results going in : "+str(output_folder))
         

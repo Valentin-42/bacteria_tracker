@@ -57,7 +57,7 @@ def statistics_from_csv(file_path,output_folder_path) :
     plt.xlabel('O_avg')
     plt.xticks(angle_bins, ['0', '45', '90', '-45'])
     plt.ylabel('Average Tracked Time (in frame)')
-    plt.savefig(output_folder_path+'results.png')
+    plt.savefig(os.path.join(output_folder_path,'results.png'))
 
 
 def create_illustration_video(file_path,output_folder_path,metadata_file_path):
@@ -68,7 +68,7 @@ def create_illustration_video(file_path,output_folder_path,metadata_file_path):
     image_path = data["original_images"]
     duration = data["video_duration"]
 
-    img = cv2.imread(image_path+os.listdir(image_path)[0])
+    img = cv2.imread(os.path.join(image_path,os.listdir(image_path)[0]))
     height, width, _ = img.shape
 
     print("Image height:", height)
@@ -101,11 +101,12 @@ def create_illustration_video(file_path,output_folder_path,metadata_file_path):
     print(len(bb))
 
     for i in range(0,duration) :
-        i=49
-
         frame = 255*np.ones((height,width,3), np.uint8)
         print("creating img :" +str(i))
         for j in range(0,len(rows)) : # bacteria j
+
+            if len(moments[j])==0:
+                continue
 
             if  i >= appear_frame[j]  and i < lost_frame[j] : #Bacteria j is on the image i  
 
@@ -147,7 +148,7 @@ def create_illustration_video(file_path,output_folder_path,metadata_file_path):
         video.append(frame)
 
     for i,frame in enumerate(video) :
-        cv2.imwrite(output_folder_path+str(i)+"_img.jpg", frame)
+        cv2.imwrite(os.path.join(output_folder_path,"%06d_img.jpg"%i), frame)
         print("saving img :" +str(i))
         
 
@@ -155,13 +156,13 @@ if __name__ == "__main__":
 
     #base_folder    = '/home/GPU/vvial/local_storage/bacteria_tracker/yolov5/runs/detect/testing/'
 
-    base_folder = "~/local_storage/bacteria_tracker/yolov5/runs/detect/T1J(9h16-9h33)_raw/" #sys.argv[1]
-    csv_file_path = base_folder+"tracking/data/results.csv"
+    base_folder = sys.argv[1]
+    csv_file_path = os.path.join(base_folder,"tracking","data","results.csv")
 
-    output_folder_path = base_folder+"illustration/"
-    output_image_folder_path = base_folder+"illustration/images/"
-    data_folder_path = base_folder+"tracking/data/"
-    metadata_file_path = data_folder_path+"tracking_metadata.json"
+    output_folder_path = os.path.join(base_folder,"illustration")
+    output_image_folder_path = os.path.join(base_folder,"illustration","images")
+    data_folder_path = os.path.join(base_folder,"tracking","data")
+    metadata_file_path = os.path.join(data_folder_path,"tracking_metadata.json")
 
     if not os.path.isdir(output_folder_path) :
         os.mkdir(output_folder_path)
@@ -170,4 +171,4 @@ if __name__ == "__main__":
 
     statistics_from_csv(csv_file_path,data_folder_path)
 
-    #create_illustration_video(csv_file_path,output_image_folder_path,metadata_file_path)
+    # create_illustration_video(csv_file_path,output_image_folder_path,metadata_file_path)
