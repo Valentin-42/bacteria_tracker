@@ -60,8 +60,9 @@ def statistics_from_csv(file_path,output_folder_path) :
     plt.savefig(os.path.join(output_folder_path,'results.png'))
 
 
+# This function still has a problem somewhere, probably an index error or we are misreading the csv file.
 def create_illustration_video(file_path,output_folder_path,metadata_file_path):
-
+    
     with open(metadata_file_path) as f:
         data = json.load(f)
 
@@ -144,7 +145,6 @@ def create_illustration_video(file_path,output_folder_path,metadata_file_path):
                         frame = cv2.ellipse(frame, center_coordinates, axesLength, angle, 0, 360, (0,0,255), -1)
                     except :
                         print("cannot bb :" +str(index)+" "+str(len(bb[j])))
-        return
         video.append(frame)
 
     for i,frame in enumerate(video) :
