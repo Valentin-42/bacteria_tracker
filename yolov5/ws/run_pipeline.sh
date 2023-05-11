@@ -11,7 +11,7 @@ model_weights_path="/mnt/gpu_storage/bacteria_tracker/yolov5/runs/train/yolov5s_
 project_name="Manip2-debut_cp"
 
 # Inference on images
-python /mnt/gpu_storage/bacteria_tracker/yolov5/detect.py --source "$images_path" --weights "$model_weights_path" --name "$project_name" --save-txt --hide-labels
+#python /mnt/gpu_storage/bacteria_tracker/yolov5/detect.py --source "$images_path" --weights "$model_weights_path" --name "$project_name" --save-txt --hide-labels
 
 # Create folder architecture
 base_path="/mnt/gpu_storage/bacteria_tracker/yolov5/runs/detect/${project_name}"
@@ -38,7 +38,7 @@ echo "Setup folder architecture"
 cp "$images_path"/*_raw.jpg "$original_images_folder"
 
 # Tracking images from detections saved
-python kalman.py "$base_path" "$tracking_path_folder"
+# python kalman.py "$base_path" "$tracking_path_folder"
 
 # Plot
 python interpreter.py "$base_path"

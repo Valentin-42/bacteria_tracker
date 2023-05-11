@@ -11,7 +11,7 @@ import json
 
 def statistics_from_csv(file_path,output_folder_path) :
     # Open the CSV file
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, compression="zip")
 
     # Extract the rows
     rows = df.values.tolist()
@@ -79,7 +79,7 @@ def create_illustration_video(file_path,output_folder_path,metadata_file_path):
     video = []
     
     # Open the CSV file
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, compression="zip")
 
     # Extract the rows
     rows = df.values.tolist()
