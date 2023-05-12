@@ -9,9 +9,20 @@ import copy
 import shutil
 import json
 import sys
+import scipy
 
-class Bacterie:
-    def __init__(self, bb, P, etat):
+BacteriaCounter=0
+
+def GetNewBacteriaId():
+    global BacteriaCounter
+    val=BacteriaCounter
+    BacteriaCounter+=1
+    return val
+
+class Bacteria:
+    def __init__(self, bb, P, etat,bid):
+        global BacteriaCounter
+        self.id = bid
         self._bb = bb
         self.etat = etat
         self.P = P
@@ -19,6 +30,7 @@ class Bacterie:
         self.orientation = -1
 
         # For csv file
+        self.last_seen = -1
         self.spawn_frame = -1
         self.lost_frame = -1
         self._center = [[self._bb[0], self._bb[1]]]
@@ -114,6 +126,11 @@ def save_to_csv(X,Llost,filename,video_duration):
     df.to_csv(filename, index=True, compression="zip")
 
 
+def compute_dcenter(boxA, boxB):
+    cA=[boxA[0]+boxA[2]/2.,boxA[1]+boxA[3]/2.]
+    cB=[boxB[0]+boxB[2]/2.,boxB[1]+boxB[3]/2.]
+    return numpy.hypot(cA[0]-cB[0],cA[1]-cB[1])
+
 def compute_iou(boxA, boxB):
         # determine the (x, y)-coordinates of the intersection rectangle
         xA = max(boxA[0], boxB[0])
@@ -137,49 +154,68 @@ def compute_iou(boxA, boxB):
 
 def Compare(X,Z,img,frame_number) :
 
-    Xb = [] #liste des bacteries apres match
+    Xb = [] #liste des Bacterias apres match
     Xn = []
-    eps = 0.5 #Tune : trust factor matching
+    eps = 0.1 #Tune : trust factor matching
     cmax = 4
-    Zc = Z.copy()
-    for zk in Zc : #zk is a bb
-        zbk = Bacterie(zk,numpy.zeros((4,4)),'n')
-        for xk in X : #xk is a Bacteria
-            zbk.calculate_moments(img,False)
+    matched=[0]*len(Z)
+    Cost=1000*numpy.ones((len(X),len(Z)))
+    for iz,zk in enumerate(Z) : #zk is a bb
+        zbk = Bacteria(zk,max(zk[2],zk[3])/5 * numpy.identity(4),'n',None)
+        zbk.calculate_moments(img,False)
+        for ix,xk in enumerate(X) : #xk is a Bacteria
             xk.calculate_moments(img,False)
             coef = (zbk.ellipticity + xk.ellipticity)/2
-            diff = abs(xk.orientation - zbk.orientation) % 180
-            if diff > 90:
-                diff = 180 - diff
-            diff = (179-diff)/179
+            do = abs(numpy.fmod(xk.orientation - zbk.orientation+270,180)-90)
+            diff = (179.-do)/179.
 
-            r = numpy.linalg.norm(numpy.array([zbk.bb[0],zbk.bb[1]])- numpy.array([xk.bb[0],xk.bb[1]]))
+            r = compute_dcenter(xk.bb,zk)
             k=0.01 #Tune max distance of center of 1 bacteria between 2 frames 
-            weight = coef*numpy.exp(-k*(1.1-coef)*r)*(diff)  + (1-coef)*compute_iou(xk.bb, zk)
+            iou = compute_iou(xk.bb, zk)
+            if iou < 1e-6:
+                continue
+            weight = coef*numpy.exp(-k*(1.1-coef)*r)*(diff)  + (1-coef)*iou
+            # print("Z %d - X %d: coef %f diff %f %f r %f iou %f w %f" % (iz,xk.id,coef,do,diff,r,iou,weight))
             if weight > eps :
-                xk.etat = 'a'
-                if (coef) > (1-coef) : 
-                    xk.etat = 'i'
-                Z.remove(zk)
-                Update(xk,zk)
-                Xb.append(xk)
-                break
+                Cost[ix,iz]=1 - weight
+
+    # print(Cost)
+    row_ind, col_ind = scipy.optimize.linear_sum_assignment(Cost)
+    # print([(r,c) for (r,c) in zip(row_ind,col_ind)])
+    for (r,c) in zip(row_ind,col_ind):
+        if Cost[r,c] < 1:
+            xk = X[r]
+            zk = Z[c]
+            print("Matching obs %d with bacteria %d" % (c,xk.id))
+            xk.etat = 'a'
+            if (coef) > (1-coef) : 
+                xk.etat = 'i'
+            matched[c]=1
+            Update(xk,zk)
+            xk.last_seen = frame_number
+            Xb.append(xk)
     
-    for zk in Z :
+    for iz,(im,zk) in enumerate(zip(matched,Z)) :
+        if im == 1:
+            continue
+        print("Obs %d is a new bacteria" % iz)
         #Create new bacteria
-        b = copy.copy(Bacterie(zk,numpy.zeros((4,4)),'n'))
+        b = Bacteria(zk,max(zk[2],zk[3])/5 * numpy.identity(4),'n',GetNewBacteriaId())
         b.spawn_frame = frame_number
+        b.last_seen = frame_number
         Xb.append(b)
 
     for xk in X :
         if xk not in Xb:
             #Lost
             if(xk.counter > cmax) :
+                print("Bacteria %d is lost" % xk.id)
                 #really lost
                 xk.etat = 'l'
                 xk.lost_frame = frame_number
                 Llost.append(xk)
             else :
+                print("Bacteria %d is missing (c=%d)" % (xk.id,xk.counter))
                 #pas encore perdu
                 xk.counter +=1
                 Xb.append(xk)
@@ -205,29 +241,53 @@ def Update(bacteria,Z) :
 
 def main_tracker(path_to_labels,path_to_img,output_folder) :
     
-    files = os.listdir(path_to_labels)
+    #files = os.listdir(path_to_labels)
+    files = os.listdir(path_to_img)
     # sorted_files = sorted(files, key=lambda x: int(x[3:-4]))
     sorted_files = sorted(files)
     video_duration = len(files)
 
+    # font
+    font = cv2.FONT_HERSHEY_SIMPLEX
+      
+    # fontScale
+    fontScale = 1
+       
+    # Line thickness of 2 px
+    thickness = 2
+       
+
+    X = []
     for i,file in enumerate(sorted_files) : #for each frame 
+        # if i > 50:
+        #     break
         name,ext = os.path.splitext(file) 
         print("Kalman is processing image : ",name)
         img = cv2.imread(os.path.join(path_to_img,name+".jpg"))
         imgh, imgw = img.shape[:2]
         img_out = img.copy()
         Z = []
-        with open(os.path.join(path_to_labels,file), "r") as labelfile:
-            for line in labelfile :
-                t = line.split("\n")[0].split(" ")
-                [x,y,w,h] = [float(t[1]),float(t[2]),float(t[3]),float(t[4])]
-                [x,y,w,h] = [int(x*imgw),int(y*imgh),int(w*imgw) ,int(h*imgh)] #Normalize
-                Z.append([x,y,w,h])
+        if os.path.exists(os.path.join(path_to_labels,name+".txt")):
+            with open(os.path.join(path_to_labels,name+".txt"), "r") as labelfile:
+                for line in labelfile :
+                    t = line.strip().split(" ")
+                    [x,y,w,h] = [float(t[1]),float(t[2]),float(t[3]),float(t[4])]
+                    [x,y,w,h] = [int(x*imgw),int(y*imgh),int(w*imgw) ,int(h*imgh)] #Normalize
+                    Z.append([x,y,w,h])
+
+        print("Observations:")
+        for iz,bb in enumerate(Z):
+            print("%d: %s"%(iz,str(bb)))
+
+        print("Current State:")
+        for ix,b in enumerate(X):
+            print("%d id %d: %s" % (ix,b.id,str([int(round(x)) for x in b.bb])))
+
 
         if i == 0 :
-            X = []
-            for bb in Z :
-                new_b = Bacterie(bb, numpy.zeros((4,4)),'n')
+            for iz,bb in enumerate(Z) :
+                print("Init: Obs %d is a new bacteria" % iz)
+                new_b = Bacteria(bb, max(bb[2],bb[3])/5 * numpy.identity(4),'n',GetNewBacteriaId())
                 new_b.spawn_frame = 0
                 X.append(new_b)
         else :
@@ -246,8 +306,12 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
                 color =(255,0,0) #Blue
             
             cv2.rectangle(img_out, (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), color, 3)
+            cv2.putText(img_out, str(bacteria.id), (x-int(w/2), y-int(h/2)-6), font, 
+                               fontScale, color, thickness, cv2.LINE_AA)
+
         cv2.imwrite(os.path.join(output_folder,"images",name+".jpg"), img_out)
 
+    print("Saving CSV and JSON to disk")
     save_to_csv(X,Llost,os.path.join(output_folder,"data","results.csv"),video_duration)
     metadata = {'video_duration':video_duration,'original_labels':path_to_labels,'original_images':path_to_img}
     with open(os.path.join(output_folder,"data","tracking_metadata.json"),"w") as f :
@@ -261,12 +325,15 @@ if __name__ == "__main__":
     # output_folder    = '/home/GPU/vvial/home_gtl/bacteria_tracker_ws/experiment/'
 
     base_path = sys.argv[1]
-    path_to_labels = os.path.join(base_path,"labels")
+    path_to_labels = os.path.join(base_path,"detect","labels")
     path_to_img = os.path.join(base_path,"original_images","images")
     output_folder = sys.argv[2]
 
     if os.path.isdir(output_folder) :
-        shutil.rmtree("./test/")
+        try:
+            shutil.rmtree("./test/")
+        except:
+            pass
         os.mkdir("./test/")
         if not os.path.isdir(os.path.join(output_folder,"images")):
             os.mkdir(os.path.join(output_folder,"images"))
