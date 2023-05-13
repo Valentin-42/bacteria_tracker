@@ -28,6 +28,8 @@ class Bacteria:
         self.P = P
         self.counter = 0
         self.orientation = -1
+        self.roi = None
+        self.groi = None
 
         # For csv file
         self.last_seen = -1
@@ -57,17 +59,46 @@ class Bacteria:
     def boundingboxes(self):
         return self._boundingboxes
 
-    def calculate_moments(self,image,debug=False):
-        # Extract the region of interest defined by the bounding box
+    def image_has_changed(self,image, frame=0):
+        if self.groi is None:
+            return True
         x, y, w, h = self.bb
-        w_max,h_max,_ = image.shape
+        h_max,w_max,_ = image.shape
 
         roi = image[max(0,int(y-h/2)):min(h_max,int(y+h/2)), max(0,int(x-w/2)):min(w_max,int(x+w/2))] # Extract ROI
-        if not roi.size:
+        if not self.roi.size:
+            return True
+        groi = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY) # To Gray
+
+        droi = (groi.astype(float)-self.groi.astype(float)).flatten()
+        diff2 = numpy.linalg.norm(droi,2) / droi.shape[0]
+        diff1 = numpy.linalg.norm(droi,1) / droi.shape[0]
+        diffi = numpy.linalg.norm(droi,numpy.inf) 
+        std = numpy.std(self.groi)
+        # print("Image diff: %f %f %f std %f" % (diff2,diff1,diffi,std))
+        # cv2.imwrite("oldroi_%04d_%04d.png" % (self.id,frame),self.groi)
+        # cv2.imwrite("newroi_%04d_%04d.png" % (self.id,frame),groi)
+        return diffi > 2*std
+
+
+    def acquire_roi(self,image):
+        # if self.id is not None:
+        #     print("Bacteria %d: updating roi" % self.id)
+        # Extract the region of interest defined by the bounding box
+        x, y, w, h = self.bb
+        h_max,w_max,_ = image.shape
+
+        self.roi = image[max(0,int(y-h/2)):min(h_max,int(y+h/2)), max(0,int(x-w/2)):min(w_max,int(x+w/2))].copy() # Extract ROI
+        if not self.roi.size:
+            self.roi = None
+            self.groi = None
             return
-        gray_img = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY) # To Gray
-        mean_val = cv2.mean(gray_img)[0] # Get mean value of pixels
-        _, binary_img = cv2.threshold(gray_img,mean_val, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU) # To binary
+        self.groi = cv2.cvtColor(self.roi, cv2.COLOR_RGB2GRAY) # To Gray
+
+    def calculate_moments(self,image,debug=False):
+        self.acquire_roi(image)
+        mean_val = cv2.mean(self.groi)[0] # Get mean value of pixels
+        _, binary_img = cv2.threshold(self.groi,mean_val, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU) # To binary
 
         # Calculate the moments of the region of interest
         moments = cv2.moments(binary_img)
@@ -127,8 +158,8 @@ def save_to_csv(X,Llost,filename,video_duration):
 
 
 def compute_dcenter(boxA, boxB):
-    cA=[boxA[0]+boxA[2]/2.,boxA[1]+boxA[3]/2.]
-    cB=[boxB[0]+boxB[2]/2.,boxB[1]+boxB[3]/2.]
+    cA=[boxA[0],boxA[1]]
+    cB=[boxB[0],boxB[1]]
     return numpy.hypot(cA[0]-cB[0],cA[1]-cB[1])
 
 def compute_iou(boxA, boxB):
@@ -157,14 +188,15 @@ def Compare(X,Z,img,frame_number) :
     Xb = [] #liste des Bacterias apres match
     Xn = []
     eps = 0.1 #Tune : trust factor matching
-    cmax = 4
+    cmax = 2
+    cmax2 = 6
     matched=[0]*len(Z)
     Cost=1000*numpy.ones((len(X),len(Z)))
+
     for iz,zk in enumerate(Z) : #zk is a bb
         zbk = Bacteria(zk,max(zk[2],zk[3])/5 * numpy.identity(4),'n',None)
         zbk.calculate_moments(img,False)
         for ix,xk in enumerate(X) : #xk is a Bacteria
-            xk.calculate_moments(img,False)
             coef = (zbk.ellipticity + xk.ellipticity)/2
             do = abs(numpy.fmod(xk.orientation - zbk.orientation+270,180)-90)
             diff = (179.-do)/179.
@@ -192,6 +224,8 @@ def Compare(X,Z,img,frame_number) :
                 xk.etat = 'i'
             matched[c]=1
             Update(xk,zk)
+            xk.calculate_moments(img,False)
+            xk.counter = 0
             xk.last_seen = frame_number
             Xb.append(xk)
     
@@ -201,24 +235,40 @@ def Compare(X,Z,img,frame_number) :
         print("Obs %d is a new bacteria" % iz)
         #Create new bacteria
         b = Bacteria(zk,max(zk[2],zk[3])/5 * numpy.identity(4),'n',GetNewBacteriaId())
+        b.calculate_moments(img,False)
         b.spawn_frame = frame_number
         b.last_seen = frame_number
         Xb.append(b)
 
     for xk in X :
         if xk not in Xb:
+            xk.counter += 1
+            if not xk.image_has_changed(img,frame_number):
+                xk.last_seen = frame_number
+                if(xk.counter > cmax2) :
+                    print("Missing for too long, bacteria %d is lost" % xk.id)
+                    #really lost
+                    xk.etat = 'l'
+                    xk.lost_frame = frame_number
+                    Llost.append(xk)
+                else:
+                    print("Bacteria %d is missing (c=%d) but image did not change" % (xk.id,xk.counter))
+                    Xb.append(xk)
+                    xk.etat = 'u'
+                    xk.calculate_moments(img,False)
             #Lost
-            if(xk.counter > cmax) :
-                print("Bacteria %d is lost" % xk.id)
-                #really lost
-                xk.etat = 'l'
-                xk.lost_frame = frame_number
-                Llost.append(xk)
             else :
-                print("Bacteria %d is missing (c=%d)" % (xk.id,xk.counter))
                 #pas encore perdu
-                xk.counter +=1
-                Xb.append(xk)
+                if(xk.counter > cmax) :
+                    print("Bacteria %d is lost" % xk.id)
+                    #really lost
+                    xk.etat = 'l'
+                    xk.lost_frame = frame_number
+                    Llost.append(xk)
+                else:
+                    print("Bacteria %d is missing (c=%d)" % (xk.id,xk.counter))
+                    Xb.append(xk)
+                    xk.etat = 'm'
     return Xb
 
 
@@ -281,13 +331,14 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
 
         print("Current State:")
         for ix,b in enumerate(X):
-            print("%d id %d: %s" % (ix,b.id,str([int(round(x)) for x in b.bb])))
+            print("%d id %d: %s %s" % (ix,b.id,str([int(round(x)) for x in b.bb]),b.etat))
 
 
         if i == 0 :
             for iz,bb in enumerate(Z) :
                 print("Init: Obs %d is a new bacteria" % iz)
                 new_b = Bacteria(bb, max(bb[2],bb[3])/5 * numpy.identity(4),'n',GetNewBacteriaId())
+                new_b.calculate_moments(img,False)
                 new_b.spawn_frame = 0
                 X.append(new_b)
         else :
@@ -295,19 +346,26 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
             X = Compare(X,Z,img,frame_number=i)
 
         for bacteria in X :
-            bacteria.calculate_moments(img,False)
             [x,y,w,h] =  [bacteria.bb[0],bacteria.bb[1],bacteria.bb[2],bacteria.bb[3]]
             [x,y,w,h] =  [int(x),int(y),int(w),int(h)]
             if bacteria.etat == 'n' :
                 color =(0,0,255) #Red
             elif bacteria.etat == 'i' :
                 color =(0,255,0) #Green
+            elif bacteria.etat == 'u' :
+                color =(0,128,192) #orange ? 
+            elif bacteria.etat == 'm' :
+                color =(255,0,255) #purple
+            elif bacteria.etat == 'l' :
+                color =(128,128,128) #gray
+            elif bacteria.etat == 'a' :
+                color =(255,255,0) #gray
             else :
-                color =(255,0,0) #Blue
+                color =(255,255,255) # Should not be here
             
             cv2.rectangle(img_out, (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), color, 3)
             cv2.putText(img_out, str(bacteria.id), (x-int(w/2), y-int(h/2)-6), font, 
-                               fontScale, color, thickness, cv2.LINE_AA)
+                               fontScale, (255,255,255), thickness, cv2.LINE_AA)
 
         cv2.imwrite(os.path.join(output_folder,"images",name+".jpg"), img_out)
 
