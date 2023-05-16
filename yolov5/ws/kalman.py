@@ -316,6 +316,7 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
         img = cv2.imread(os.path.join(path_to_img,name+".jpg"))
         imgh, imgw = img.shape[:2]
         img_out = img.copy()
+        cv2.normalize(img, img_out, 255.0, 0.0, cv2.NORM_MINMAX);
         Z = []
         if os.path.exists(os.path.join(path_to_labels,name+".txt")):
             with open(os.path.join(path_to_labels,name+".txt"), "r") as labelfile:
