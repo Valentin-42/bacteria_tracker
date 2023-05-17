@@ -193,6 +193,8 @@ def Compare(X,Z,img,frame_number) :
     matched=[0]*len(Z)
     Cost=1000*numpy.ones((len(X),len(Z)))
 
+    IOU=numpy.zeros((len(X),len(Z)))
+
     for iz,zk in enumerate(Z) : #zk is a bb
         zbk = Bacteria(zk,max(zk[2],zk[3])/5 * numpy.identity(4),'n',None)
         zbk.calculate_moments(img,False)
@@ -209,6 +211,8 @@ def Compare(X,Z,img,frame_number) :
             weight = coef*numpy.exp(-k*(1.1-coef)*r)*(diff)  + (1-coef)*iou
             # print("Z %d - X %d: coef %f diff %f %f r %f iou %f w %f" % (iz,xk.id,coef,do,diff,r,iou,weight))
             if weight > eps :
+                # print("Z %d - X %d: coef %f diff %f %f r %f iou %f w %f" % (iz,xk.id,coef,do,diff,r,iou,weight))
+                IOU[ix,iz]=iou
                 Cost[ix,iz]=1 - weight
 
     # print(Cost)
@@ -231,6 +235,9 @@ def Compare(X,Z,img,frame_number) :
     
     for iz,(im,zk) in enumerate(zip(matched,Z)) :
         if im == 1:
+            continue
+        if IOU[:,iz].max() > 0.33:
+            print("Unmatched Obs %d is ignored due to overlap" % iz)
             continue
         print("Obs %d is a new bacteria" % iz)
         #Create new bacteria
@@ -327,8 +334,44 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
                     Z.append([x,y,w,h])
 
         print("Observations:")
+        IOU=numpy.zeros((len(Z),len(Z)),dtype=int)
         for iz,bb in enumerate(Z):
             print("%d: %s"%(iz,str(bb)))
+            for iz2 in range(iz):
+                if compute_iou(bb,Z[iz2]) > 0.33:
+                    IOU[iz,iz2] = 1
+                    IOU[iz2,iz] = 1
+
+        Zfix=[]
+        overlap=list(numpy.where(numpy.max(IOU,axis=0))[0])
+        if len(overlap)>0:
+            print("Detected %s overlapping bbox" % str(overlap))
+        oset=[]
+        for l in overlap:
+            # breakpoint()
+            if any([(l in o) for o in oset]):
+                # already in another overlap set
+                continue
+            o0=set([l])
+            while True:
+                o=set(o0)
+                for i in o0:
+                    o=o.union(set(numpy.where(IOU[i,:])[0]))
+                if o == o0:
+                    break
+                o0 = o
+            oset.append(o0)
+        if len(oset)>0:
+            print(str(oset))
+
+        for iz,bb in enumerate(Z):
+            if IOU[iz,:].max()==0:
+                Zfix.append(bb)
+        for o in oset:
+            ol=list(o)
+            print("Selecting random observation in %s" % str(ol))
+            Zfix.append(Z[ol[numpy.random.randint(0,len(ol)-1)]])
+        Z=Zfix
 
         print("Current State:")
         for ix,b in enumerate(X):
