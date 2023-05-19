@@ -13,7 +13,7 @@ def export(output_folder) :
     if not isExist:
         os.makedirs(output_folder)
 
-    API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJja3RyMWl3MGsyMTd2MHljdmM4dGwwZ2tpIiwib3JnYW5pemF0aW9uSWQiOiJja3RyMWl3MDEyMTd1MHljdjI0aGE4MjNxIiwiYXBpS2V5SWQiOiJjbDBncnVzczBwMWlqMTAycDF5ZWk1dXI0Iiwic2VjcmV0IjoiZTMxYzQwZjRkZjkyYTkyM2RlZGIxNTk2MjczMDhkNjMiLCJpYXQiOjE2NDY2NjE2OTEsImV4cCI6MjI3NzgxMzY5MX0.FHpoDeRUoyS10VEigBFH74ibxWPWvpcbE4A_HSX5qjo"
+    API_KEY = ""
     client = lb.Client(API_KEY)
 
     project_id = "clfa1qlma08zc07zh3s8d4iox"
