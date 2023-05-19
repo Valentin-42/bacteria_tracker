@@ -20,11 +20,11 @@ def GetNewBacteriaId():
     return val
 
 class Bacteria:
-    def __init__(self, bb, P, etat,bid):
+    def __init__(self, bb, P, state,bid):
         global BacteriaCounter
         self.id = bid
         self._bb = bb
-        self.etat = etat
+        self.state = state
         self.P = P
         self.counter = 0
         self.orientation = -1
@@ -40,6 +40,12 @@ class Bacteria:
         self.orientations = []
         self.moments=[]
         self.ellipticity=-1
+
+    def getCSVheader():
+        return "id,state,x,y,w,h,orientation,ellipticity"
+
+    def getCSVline(self):
+        return "%d,%s,%f,%f,%f,%f,%f,%f" % (self.id,self.state,self._bb[0],self._bb[1],self._bb[2],self._bb[3],self.orientation,self.ellipticity)
 
     @property
     def bb(self):
@@ -223,9 +229,9 @@ def Compare(X,Z,img,frame_number) :
             xk = X[r]
             zk = Z[c]
             print("Matching obs %d with bacteria %d" % (c,xk.id))
-            xk.etat = 'a'
+            xk.state = 'a'
             if (coef) > (1-coef) : 
-                xk.etat = 'i'
+                xk.state = 'i'
             matched[c]=1
             Update(xk,zk)
             xk.calculate_moments(img,False)
@@ -255,13 +261,13 @@ def Compare(X,Z,img,frame_number) :
                 if(xk.counter > cmax2) :
                     print("Missing for too long, bacteria %d is lost" % xk.id)
                     #really lost
-                    xk.etat = 'l'
+                    xk.state = 'l'
                     xk.lost_frame = frame_number
                     Llost.append(xk)
                 else:
                     print("Bacteria %d is missing (c=%d) but image did not change" % (xk.id,xk.counter))
                     Xb.append(xk)
-                    xk.etat = 'u'
+                    xk.state = 'u'
                     xk.calculate_moments(img,False)
             #Lost
             else :
@@ -269,13 +275,13 @@ def Compare(X,Z,img,frame_number) :
                 if(xk.counter > cmax) :
                     print("Bacteria %d is lost" % xk.id)
                     #really lost
-                    xk.etat = 'l'
+                    xk.state = 'l'
                     xk.lost_frame = frame_number
                     Llost.append(xk)
                 else:
                     print("Bacteria %d is missing (c=%d)" % (xk.id,xk.counter))
                     Xb.append(xk)
-                    xk.etat = 'm'
+                    xk.state = 'm'
     return Xb
 
 
@@ -378,7 +384,7 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
 
         print("Current State:")
         for ix,b in enumerate(X):
-            print("%d id %d: %s %s" % (ix,b.id,str([int(round(x)) for x in b.bb]),b.etat))
+            print("%d id %d: %s %s" % (ix,b.id,str([int(round(x)) for x in b.bb]),b.state))
 
 
         if i == 0 :
@@ -396,17 +402,17 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
         for bacteria in X :
             [x,y,w,h] =  [bacteria.bb[0],bacteria.bb[1],bacteria.bb[2],bacteria.bb[3]]
             [x,y,w,h] =  [int(x),int(y),int(w),int(h)]
-            if bacteria.etat == 'n' :
+            if bacteria.state == 'n' :
                 color =(0,0,255) #Red
-            elif bacteria.etat == 'i' :
+            elif bacteria.state == 'i' :
                 color =(0,255,0) #Green
-            elif bacteria.etat == 'u' :
+            elif bacteria.state == 'u' :
                 color =(0,128,192) #orange ? 
-            elif bacteria.etat == 'm' :
+            elif bacteria.state == 'm' :
                 color =(255,0,255) #purple
-            elif bacteria.etat == 'l' :
+            elif bacteria.state == 'l' :
                 color =(128,128,128) #gray
-            elif bacteria.etat == 'a' :
+            elif bacteria.state == 'a' :
                 color =(255,255,0) #gray
             else :
                 color =(255,255,255) # Should not be here
@@ -417,8 +423,15 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
 
         cv2.imwrite(os.path.join(output_folder,"images",name+".jpg"), img_out)
 
+        with open(os.path.join(output_folder,"traces.csv"),"a") as f:
+            for b in X:
+                f.write("%d,%s,%s\n" % (i,file,b.getCSVline()))
+            for b in Llost:
+                f.write("%d,%s,%s\n" % (i,file,b.getCSVline()))
+            Llost.clear()
+
     print("Saving CSV and JSON to disk")
-    save_to_csv(X,Llost,os.path.join(output_folder,"data","results.csv"),video_duration)
+    # save_to_csv(X,Llost,os.path.join(output_folder,"data","results.csv"),video_duration)
     metadata = {'video_duration':video_duration,'original_labels':path_to_labels,'original_images':path_to_img}
     with open(os.path.join(output_folder,"data","tracking_metadata.json"),"w") as f :
         json.dump(metadata,f)
@@ -445,6 +458,8 @@ if __name__ == "__main__":
             os.mkdir(os.path.join(output_folder,"images"))
         if not os.path.isdir(os.path.join(output_folder,"data")):
             os.mkdir(os.path.join(output_folder,"data"))
+        with open(os.path.join(output_folder,"traces.csv"),"w") as f:
+            f.write("%frameid,filename,%s\n" % Bacteria.getCSVheader())
 
         print("Results going in : "+str(output_folder))
         
