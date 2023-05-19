@@ -44,6 +44,9 @@ class Bacteria:
         self.P = P
         self.counter = 0
         self.orientation = -1
+        self.area = -1
+        self.majorL = 0
+        self.minorL = 0
         self.roi = None
         self.groi = None
 
@@ -58,10 +61,10 @@ class Bacteria:
         self.ellipticity=-1
 
     def getCSVheader():
-        return "id,state,x,y,w,h,orientation,ellipticity"
+        return "id,state,x,y,w,h,majorL,minorL,orientation,ellipticity,area"
 
     def getCSVline(self):
-        return "%d,%d,%d,%d,%d,%d,%f,%f" % (self.id,stateToNum(self.state),int(self._bb[0]),int(self._bb[1]),int(self._bb[2]),int(self._bb[3]),self.orientation,self.ellipticity)
+        return "%d,%d,%d,%d,%d,%d,%.2f,%.2f,%d,%.3f,%d" % (self.id,stateToNum(self.state),int(self._bb[0]),int(self._bb[1]),int(self._bb[2]),int(self._bb[3]),self.majorL,self.minorL,int(self.orientation),self.ellipticity,self.area)
 
     @property
     def bb(self):
@@ -126,6 +129,10 @@ class Bacteria:
         moments = cv2.moments(binary_img)
         if moments["m00"] == 0 :
             self.orientation = -1
+            self.ellipticity = -1
+            self.area = -1
+            self.minorL = -1
+            self.majorL = -1
             return
 
         bx =  moments["m10"] / moments["m00"]
@@ -157,8 +164,12 @@ class Bacteria:
             oi = cv2.ellipse(oi, (int(bx),int(by)), (int(majorL),int(minorL)),int(-angle+180), 0, 360, (0,0,255), 2)
             cv2.imwrite(os.path.join("test","angle_"+str(round(angle,10))+"_"+unique_filename+".jpg"), oi)
 
-        self.orientations.append(angle)
+        self.orientation = angle
         self.ellipticity = ellipticity
+        self.minorL = minorL
+        self.majorL = majorL
+        self.area = moments["m00"]/255.
+        self.orientations.append(angle)
         self.moments.append(moments)
 
 Llost  = []
