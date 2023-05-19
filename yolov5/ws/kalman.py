@@ -236,7 +236,7 @@ def Compare(X,Z,img,frame_number) :
     for iz,(im,zk) in enumerate(zip(matched,Z)) :
         if im == 1:
             continue
-        if IOU[:,iz].max() > 0.33:
+        if (IOU.shape[0]>0) and (IOU[:,iz].max() > 0.33):
             print("Unmatched Obs %d is ignored due to overlap" % iz)
             continue
         print("Obs %d is a new bacteria" % iz)
@@ -342,36 +342,39 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
                     IOU[iz,iz2] = 1
                     IOU[iz2,iz] = 1
 
-        Zfix=[]
-        overlap=list(numpy.where(numpy.max(IOU,axis=0))[0])
-        if len(overlap)>0:
-            print("Detected %s overlapping bbox" % str(overlap))
-        oset=[]
-        for l in overlap:
-            # breakpoint()
-            if any([(l in o) for o in oset]):
-                # already in another overlap set
-                continue
-            o0=set([l])
-            while True:
-                o=set(o0)
-                for i in o0:
-                    o=o.union(set(numpy.where(IOU[i,:])[0]))
-                if o == o0:
-                    break
-                o0 = o
-            oset.append(o0)
-        if len(oset)>0:
-            print(str(oset))
+        if len(Z)>0:
+            Zfix=[]
+            overlap=list(numpy.where(numpy.max(IOU,axis=0))[0])
+            if len(overlap)>0:
+                print("Detected %s overlapping bbox" % str(overlap))
+            oset=[]
+            for l in overlap:
+                # breakpoint()
+                if any([(l in o) for o in oset]):
+                    # already in another overlap set
+                    continue
+                o0=set([l])
+                while True:
+                    o=set(o0)
+                    for i in o0:
+                        o=o.union(set(numpy.where(IOU[i,:])[0]))
+                    if o == o0:
+                        break
+                    o0 = o
+                oset.append(o0)
+            if len(oset)>0:
+                print(str(oset))
 
-        for iz,bb in enumerate(Z):
-            if IOU[iz,:].max()==0:
-                Zfix.append(bb)
-        for o in oset:
-            ol=list(o)
-            print("Selecting random observation in %s" % str(ol))
-            Zfix.append(Z[ol[numpy.random.randint(0,len(ol)-1)]])
-        Z=Zfix
+            for iz,bb in enumerate(Z):
+                if IOU[iz,:].max()==0:
+                    Zfix.append(bb)
+            for o in oset:
+                ol=list(o)
+                osel=ol[numpy.random.randint(0,len(ol)-1)]
+                print("Selecting random observation %d in %s" % (osel,str(ol)))
+                Zfix.append(Z[osel])
+            Z=Zfix
+            print("Considering %d observations" % len(Z))
 
         print("Current State:")
         for ix,b in enumerate(X):
@@ -387,7 +390,8 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
                 X.append(new_b)
         else :
             Predict(X)
-            X = Compare(X,Z,img,frame_number=i)
+            if len(Z)>0:
+                X = Compare(X,Z,img,frame_number=i)
 
         for bacteria in X :
             [x,y,w,h] =  [bacteria.bb[0],bacteria.bb[1],bacteria.bb[2],bacteria.bb[3]]

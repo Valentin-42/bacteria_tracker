@@ -6,9 +6,10 @@ echo "Pipeline : Detect -> Kalman -> Interpreter -> Organisation"
 
 # Variables
 #images_path="/mnt/bacteria/T1J (9h16-9h33)/raw"
-images_path="/mnt/bacteria/Manip2-debut/raw"
+#images_path="/mnt/bacteria/Manip2-debut/raw"
+images_path="/mnt/bacteria/Manip2-1h30-adhesion/raw" 
 model_weights_path="/mnt/gpu_storage/bacteria_tracker/yolov5/runs/train/yolov5s_fulldataset5/weights/best.pt"
-project_name="Manip2-debut_cp"
+project_name="Manip2-1h30-adhesion_cp"
 
 # Create folder architecture
 base_path="/mnt/gpu_storage/bacteria_tracker/yolov5/runs/detect/${project_name}"
@@ -34,6 +35,7 @@ else
     python /mnt/gpu_storage/bacteria_tracker/yolov5/detect.py --source "$images_path" --weights "$model_weights_path" --name "$project_name" --save-txt --hide-labels
 fi
 
+exit 0
 
 
 # Create workspace

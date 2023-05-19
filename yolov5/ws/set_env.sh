@@ -6,7 +6,7 @@ if test "x$1" = "x"
 then
     images_path="/mnt/bacteria/Manip2-debut/raw"
 else
-    image_path="$1"
+    images_path="$1"
 fi
 
 if test "x$2" = "x"
@@ -23,11 +23,18 @@ else
     result_folder="$3"
 fi
 
+create=yes
+if test "x$4" = "x"
+then
+    create=yes
+else
+    create=$4
+fi
 
 
 # Variables
 #images_path="/mnt/bacteria/T1J (9h16-9h33)/raw"
-model_weights_path="/mnt/gpu_storage/bacteria_tracker/yolov5/runs/train/yolov5s_fulldataset5/weights/best.pt"
+model_weights_path="../runs/train/yolov5s_split_annotated_20230501/weights/best.pt"
 #project_name="Manip2-debut_cp"
 
 # Create folder architecture
@@ -48,12 +55,15 @@ label_path="${detect_path_folder}/labels"
 
 
 # Create workspace
-mkdir -p "$original_path_folder"
-mkdir -p "$original_images_folder"
+if test "$create" = "yes"
+then
+    mkdir -p "$original_path_folder"
+    mkdir -p "$original_images_folder"
 
-mkdir -p "$tracking_path_folder"
-mkdir -p "$tracking_image_path_folder"
+    mkdir -p "$tracking_path_folder"
+    mkdir -p "$tracking_image_path_folder"
 
-mkdir -p "$detect_path_folder"
-mkdir -p "$detect_images_folder"
+    mkdir -p "$detect_path_folder"
+    mkdir -p "$detect_images_folder"
+fi
 
