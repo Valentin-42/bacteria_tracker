@@ -19,6 +19,22 @@ def GetNewBacteriaId():
     BacteriaCounter+=1
     return val
 
+StateToNum={'n':1, 'a':2, 'i':3, "u":4, "m":5, "l":10}
+def stateToNum(v):
+    global StateToNum
+    try:
+        return StateToNum[v]
+    except:
+        return 0
+
+StateToText={'n':"New", 'a':"Tracked by shape", 'i':"Tracked by IOU", "u":"Undetected", "m":"Missing", "l":"Lost"}
+def stateToText(v):
+    global StateToText
+    try:
+        return StateToText[v]
+    except:
+        return "Invalid"
+
 class Bacteria:
     def __init__(self, bb, P, state,bid):
         global BacteriaCounter
@@ -45,7 +61,7 @@ class Bacteria:
         return "id,state,x,y,w,h,orientation,ellipticity"
 
     def getCSVline(self):
-        return "%d,%s,%f,%f,%f,%f,%f,%f" % (self.id,self.state,self._bb[0],self._bb[1],self._bb[2],self._bb[3],self.orientation,self.ellipticity)
+        return "%d,%d,%d,%d,%d,%d,%f,%f" % (self.id,stateToNum(self.state),int(self._bb[0]),int(self._bb[1]),int(self._bb[2]),int(self._bb[3]),self.orientation,self.ellipticity)
 
     @property
     def bb(self):
@@ -321,8 +337,8 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
        
 
     X = []
-    for i,file in enumerate(sorted_files) : #for each frame 
-        # if i > 50:
+    for frameid,file in enumerate(sorted_files) : #for each frame 
+        # if frameid > 50:
         #     break
         name,ext = os.path.splitext(file) 
         print("Kalman is processing image : ",name)
@@ -384,10 +400,10 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
 
         print("Current State:")
         for ix,b in enumerate(X):
-            print("%d id %d: %s %s" % (ix,b.id,str([int(round(x)) for x in b.bb]),b.state))
+            print("%d id %d: %s %s" % (ix,b.id,str([int(round(x)) for x in b.bb]),stateToText(b.state)))
 
 
-        if i == 0 :
+        if frameid == 0 :
             for iz,bb in enumerate(Z) :
                 print("Init: Obs %d is a new bacteria" % iz)
                 new_b = Bacteria(bb, max(bb[2],bb[3])/5 * numpy.identity(4),'n',GetNewBacteriaId())
@@ -397,7 +413,7 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
         else :
             Predict(X)
             if len(Z)>0:
-                X = Compare(X,Z,img,frame_number=i)
+                X = Compare(X,Z,img,frame_number=frameid)
 
         for bacteria in X :
             [x,y,w,h] =  [bacteria.bb[0],bacteria.bb[1],bacteria.bb[2],bacteria.bb[3]]
@@ -425,9 +441,9 @@ def main_tracker(path_to_labels,path_to_img,output_folder) :
 
         with open(os.path.join(output_folder,"traces.csv"),"a") as f:
             for b in X:
-                f.write("%d,%s,%s\n" % (i,file,b.getCSVline()))
+                f.write("%d,%s,%s\n" % (frameid,file,b.getCSVline()))
             for b in Llost:
-                f.write("%d,%s,%s\n" % (i,file,b.getCSVline()))
+                f.write("%d,%s,%s\n" % (frameid,file,b.getCSVline()))
             Llost.clear()
 
     print("Saving CSV and JSON to disk")
@@ -459,7 +475,7 @@ if __name__ == "__main__":
         if not os.path.isdir(os.path.join(output_folder,"data")):
             os.mkdir(os.path.join(output_folder,"data"))
         with open(os.path.join(output_folder,"traces.csv"),"w") as f:
-            f.write("%frameid,filename,%s\n" % Bacteria.getCSVheader())
+            f.write("%%frameid,filename,%s\n" % Bacteria.getCSVheader())
 
         print("Results going in : "+str(output_folder))
         
