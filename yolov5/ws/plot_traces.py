@@ -67,6 +67,12 @@ plt.ylabel("Bacteria")
 plt.colorbar()
 plt.savefig(os.path.join(dirname,"plot_"+basebase+".png"),facecolor='white',transparent=False,dpi=100)
 
+
 np.savetxt(os.path.join(dirname,"summary_"+basebase+".mat"),summary,fmt="%d")
 np.savetxt(os.path.join(dirname,"orientation_"+basebase+".mat"),orientation,fmt="%d")
 np.savetxt(os.path.join(dirname,"ellipticity_"+basebase+".mat"),ellipticity,fmt="%.3f")
+
+cv2.imwrite(os.path.join(dirname,"summary_"+basebase+".png"),summary*25)
+cv2.imwrite(os.path.join(dirname,"orientation_"+basebase+".png"),orientation)
+cv2.imwrite(os.path.join(dirname,"ellipticity_"+basebase+".png"),ellipticity*255)
+
