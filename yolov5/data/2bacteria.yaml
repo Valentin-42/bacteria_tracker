@@ -2,6 +2,6 @@ train: ../datasets/split_annotated_20230501/images/train
 val: ../datasets/split_annotated_20230501/images/val
 test : ../datasets/split_annotated_20230501/images/test
 
-nc: 1
+nc: 2
 
-names: ["bacteria"]
+names: ["bacteria","cluster"]
