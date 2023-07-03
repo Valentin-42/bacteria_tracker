@@ -35,6 +35,7 @@ fi
 # Variables
 #images_path="/mnt/bacteria/T1J (9h16-9h33)/raw"
 model_weights_path="../runs/train/yolov5s_split_annotated_20230501/weights/best.pt"
+model_data_path="../data/2bacteria.yaml"
 #project_name="Manip2-debut_cp"
 
 # Create folder architecture

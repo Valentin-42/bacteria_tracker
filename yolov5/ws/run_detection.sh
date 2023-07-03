@@ -9,8 +9,10 @@ set +x
 echo "Running detection on '${images_path}'"
 echo "Base path ${base_path}"
 
+# set -e
 
-python3 /mnt/gpu_storage/bacteria_tracker/yolov5/detect.py --source "$images_path" --weights "$model_weights_path" --name "$project_name" --save-txt --hide-labels --max-det 2000 --device 1
+python3 /mnt/gpu_storage/bacteria_tracker/yolov5/detect.py --source "$images_path" --weights "$model_weights_path" --name "$project_name"\
+    --project "$result_folder" --data "$model_data_path" --save-txt --hide-labels --max-det 2000 --device 1
 
 source set_env.sh "$1" "$2" "$3" yes
 
